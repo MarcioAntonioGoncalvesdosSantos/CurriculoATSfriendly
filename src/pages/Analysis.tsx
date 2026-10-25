@@ -1,13 +1,13 @@
 import { useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { Copy, Download, FileText, Printer, ShieldCheck } from 'lucide-react';
+import { Copy, Download, FileDown, FileText, Printer, ShieldCheck } from 'lucide-react';
 import { CriteriaBar } from '../components/CriteriaBar';
 import { KeywordChip } from '../components/KeywordChip';
 import { ScoreRing } from '../components/ScoreRing';
 import { Badge, Button, Card, CardTitle, EmptyState } from '../components/ui';
 import { t } from '../i18n/pt-BR';
 import { lineDiff } from '../lib/diff';
-import { downloadDocx, downloadTxt } from '../lib/export';
+import { downloadDocx, downloadPdf, downloadTxt } from '../lib/export';
 import type { KeywordResult } from '../lib/types';
 import { getAnalysis } from '../state/store';
 
@@ -25,6 +25,7 @@ export function Analysis() {
   const record = useMemo(() => (id ? getAnalysis(id) : null), [id]);
   const [tab, setTab] = useState<Tab>('diagnosis');
   const [copied, setCopied] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
 
   if (!record) {
     return (
@@ -60,6 +61,17 @@ export function Analysis() {
     window.setTimeout(() => setCopied(false), 1800);
   }
 
+  async function runExport(format: 'docx' | 'pdf' | 'txt') {
+    try {
+      setExportError(null);
+      if (format === 'docx') await downloadDocx(rewrite, analysis.job.title);
+      if (format === 'pdf') downloadPdf(rewrite, analysis.job.title);
+      if (format === 'txt') downloadTxt(rewrite, analysis.job.title);
+    } catch {
+      setExportError(t.errors.exportFailed);
+    }
+  }
+
   return (
     <div className="mx-auto max-w-[1000px]">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
@@ -91,6 +103,34 @@ export function Analysis() {
             <p className="mt-3 text-xs text-muted-foreground">{t.result.disclaimer}</p>
           </div>
         </div>
+      </Card>
+
+      <Card className="mt-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p className="text-sm font-medium">{t.result.export}</p>
+            <p className="text-xs text-muted-foreground">{t.result.exportHelp}</p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button size="sm" variant="secondary" onClick={() => void runExport('docx')}>
+              <Download size={14} aria-hidden />
+              DOCX
+            </Button>
+            <Button size="sm" onClick={() => void runExport('pdf')}>
+              <FileDown size={14} aria-hidden />
+              PDF
+            </Button>
+            <Button size="sm" variant="secondary" onClick={() => void runExport('txt')}>
+              <FileText size={14} aria-hidden />
+              TXT
+            </Button>
+          </div>
+        </div>
+        {exportError ? (
+          <p className="mt-2 text-sm text-danger-700" role="alert">
+            {exportError}
+          </p>
+        ) : null}
       </Card>
 
       <div className="mt-5 flex gap-1 border-b border-border" role="tablist">
@@ -168,20 +208,12 @@ export function Analysis() {
                     <Copy size={14} aria-hidden />
                     {copied ? t.result.copied : t.result.copy}
                   </Button>
-                  <Button size="sm" variant="secondary" onClick={() => downloadTxt(rewrite, analysis.job.title)}>
-                    <FileText size={14} aria-hidden />
-                    .txt
-                  </Button>
-                  <Button size="sm" variant="secondary" onClick={() => void downloadDocx(rewrite, analysis.job.title)}>
-                    <Download size={14} aria-hidden />
-                    .docx
-                  </Button>
                   <Link
                     to={`/print/${record.id}`}
-                    className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+                    className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-border bg-secondary px-3 text-sm font-medium hover:bg-accent"
                   >
                     <Printer size={14} aria-hidden />
-                    {t.result.print}
+                    Pré-visualizar impressão
                   </Link>
                 </div>
               }

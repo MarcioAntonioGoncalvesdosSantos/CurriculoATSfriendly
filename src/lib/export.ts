@@ -1,12 +1,15 @@
 import { Document, Packer, Paragraph, TextRun } from 'docx';
+import { jsPDF } from 'jspdf';
 import type { RewriteResult } from './types';
 
 function slug(value: string): string {
-  return value
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-zA-Z0-9]+/g, '-')
-    .replace(/^-|-$/g, '') || 'curriculo';
+  return (
+    value
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-zA-Z0-9]+/g, '-')
+      .replace(/^-|-$/g, '') || 'curriculo'
+  );
 }
 
 export function fileBase(result: RewriteResult, jobTitle: string): string {
@@ -25,12 +28,13 @@ function download(blob: Blob, filename: string): void {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-export function downloadTxt(result: RewriteResult, jobTitle: string): void {
-  const blob = new Blob([result.text], { type: 'text/plain;charset=utf-8' });
-  download(blob, `${fileBase(result, jobTitle)}.txt`);
+/** TXT em texto puro, com as seções separadas por linha em branco. */
+export function buildTxt(result: RewriteResult): string {
+  return result.text;
 }
 
-export async function downloadDocx(result: RewriteResult, jobTitle: string): Promise<void> {
+/** DOCX sem tabela e sem cabeçalho, no formato que o ATS extrai na ordem certa. */
+export async function buildDocxBlob(result: RewriteResult): Promise<Blob> {
   const children: Paragraph[] = [];
   const [name, ...contact] = result.contact;
 
@@ -72,16 +76,91 @@ export async function downloadDocx(result: RewriteResult, jobTitle: string): Pro
     styles: { default: { document: { run: { font: 'Arial', size: 22 } } } },
     sections: [
       {
-        properties: {
-          page: { margin: { top: 1020, right: 1020, bottom: 1020, left: 1020 } },
-        },
+        properties: { page: { margin: { top: 1020, right: 1020, bottom: 1020, left: 1020 } } },
         children,
       },
     ],
   });
 
-  const blob = await Packer.toBlob(doc);
+  return Packer.toBlob(doc);
+}
+
+/**
+ * PDF real (não é captura de tela): texto vetorial em coluna única, A4,
+ * margem de 18 mm, Arial/Helvetica. É o formato que o ATS lê sem embaralhar.
+ */
+export function buildPdfArrayBuffer(result: RewriteResult): ArrayBuffer {
+  const doc = new jsPDF({ unit: 'mm', format: 'a4', compress: true });
+  const margin = 18;
+  const pageBottom = 297 - margin;
+  const maxWidth = 210 - margin * 2;
+  let y = margin;
+
+  const ensure = (space: number) => {
+    if (y + space > pageBottom) {
+      doc.addPage();
+      y = margin;
+    }
+  };
+
+  const [name, ...contact] = result.contact;
+
+  if (name) {
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(14);
+    ensure(8);
+    doc.text(name.toUpperCase(), margin, y);
+    y += 6.5;
+  }
+
+  if (contact.length) {
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9.5);
+    const contactLines = doc.splitTextToSize(contact.join(' · '), maxWidth) as string[];
+    for (const line of contactLines) {
+      ensure(5);
+      doc.text(line, margin, y);
+      y += 4.2;
+    }
+    y += 3;
+  }
+
+  for (const section of result.sections) {
+    ensure(12);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(11);
+    doc.text(section.title, margin, y);
+    y += 5;
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10.5);
+    for (const item of section.lines) {
+      const wrapped = doc.splitTextToSize(`• ${item}`, maxWidth - 3) as string[];
+      for (const line of wrapped) {
+        ensure(5);
+        doc.text(line, margin + 3, y);
+        y += 4.4;
+      }
+      y += 0.9;
+    }
+    y += 3;
+  }
+
+  return doc.output('arraybuffer');
+}
+
+export function downloadTxt(result: RewriteResult, jobTitle: string): void {
+  download(new Blob([buildTxt(result)], { type: 'text/plain;charset=utf-8' }), `${fileBase(result, jobTitle)}.txt`);
+}
+
+export async function downloadDocx(result: RewriteResult, jobTitle: string): Promise<void> {
+  const blob = await buildDocxBlob(result);
   download(blob, `${fileBase(result, jobTitle)}.docx`);
+}
+
+export function downloadPdf(result: RewriteResult, jobTitle: string): void {
+  const buffer = buildPdfArrayBuffer(result);
+  download(new Blob([buffer], { type: 'application/pdf' }), `${fileBase(result, jobTitle)}.pdf`);
 }
 
 export function printPdf(): void {

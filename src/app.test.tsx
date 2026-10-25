@@ -53,6 +53,10 @@ describe('telas', () => {
     expect(screen.getByText('Palavras-chave')).toBeTruthy();
     expect(screen.getByText('Formato')).toBeTruthy();
     expect(screen.getByText('Reescrita')).toBeTruthy();
+    // Exportação visível em qualquer aba, não só na de reescrita.
+    expect(screen.getByRole('button', { name: /DOCX/ })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /PDF/ })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /TXT/ })).toBeTruthy();
   });
 
   it('renderiza a rota de impressão com o currículo ajustado', () => {

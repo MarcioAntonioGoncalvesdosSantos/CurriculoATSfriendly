@@ -121,9 +121,13 @@ O que **não** faz: criar empresa, cargo, data, formação, certificação, núm
 
 ### Etapa 5 — Exportação
 
-- `.docx` gerado no cliente (lib `docx`): Arial 11 pt, sem tabela, sem cabeçalho, headings em parágrafo negrito.
-- `.pdf` pela rota `/print/:id` com CSS `@media print`: A4, margem 1,8 cm, coluna única, preto no branco, sem elemento de interface.
+Os três botões (**DOCX**, **PDF**, **TXT**) ficam fixos no topo do resultado, visíveis em qualquer aba — não só na de reescrita.
+
+- `.docx` gerado no cliente (lib `docx`): Arial 11 pt, sem tabela, sem cabeçalho, títulos em parágrafo negrito.
+- `.pdf` gerado com `jspdf`: A4, margem 18 mm, coluna única, **texto vetorial** — não é captura de tela, então o ATS extrai o texto na ordem correta.
 - `.txt` em texto puro.
+- Nome do arquivo: `Nome-Sobrenome-Cargo.ext`.
+- A rota `/print/:id` continua como pré-visualização de impressão.
 - A nota é recalculada sobre o texto ajustado e o delta aparece na tela (`72 → 90`).
 
 ---
@@ -158,6 +162,7 @@ O que **não** faz: criar empresa, cargo, data, formação, certificação, núm
 ├── tailwind.config.js         tokens do design system no Tailwind
 ├── tsconfig.json
 ├── vercel.json                instalação, build e pasta de saída do deploy
+├── scripts/gerar-exemplo.ts   gera os três arquivos fora do navegador
 └── src/
     ├── App.tsx                rotas
     ├── main.tsx
@@ -173,8 +178,9 @@ O que **não** faz: criar empresa, cargo, data, formação, certificação, núm
     │   ├── rewrite.ts         reescrita sem invenção
     │   ├── diff.ts            comparação linha a linha
     │   ├── parsers.ts         leitura de PDF/DOCX no navegador
-    │   ├── export.ts          DOCX, TXT e impressão
-    │   └── engine.test.ts     16 testes do motor
+    │   ├── export.ts          DOCX (docx), PDF (jspdf) e TXT
+    │   ├── engine.test.ts     16 testes do motor
+    │   └── export.test.ts     4 testes dos arquivos gerados
     ├── components/            ScoreRing, CriteriaBar, KeywordChip, Stepper, Dropzone…
     ├── pages/                 Landing, Wizard, Analysis, PrintCv
     ├── state/store.ts         rascunho e análises na sessão
@@ -189,9 +195,14 @@ O que foi de fato executado neste repositório:
 
 ```bash
 npx tsc --noEmit     # 0 erros
-npx vitest run       # 20 testes, 2 arquivos, todos passando
+npx vitest run       # 25 testes, 3 arquivos, todos passando
 npx vite build       # build de produção concluído
 ```
+
+Além dos testes automatizados, os arquivos gerados foram inspecionados fora do navegador com `npx vite-node scripts/gerar-exemplo.ts /tmp/ats`:
+
+- `pdftotext -layout exemplo.pdf` devolve o currículo em coluna única, com acentos preservados (`EXPERIÊNCIA`, `Administração`) e as seções na ordem — que é exatamente o que o ATS faz.
+- descompactando o `.docx`: fonte Arial, zero `<w:tbl>` (nenhuma tabela) e o mesmo texto íntegro.
 
 Os testes cobrem: normalização e sinônimos, extração de requisitos (obrigatório × desejável, sem inventar), determinismo da nota, soma exata dos 100 pontos, evidência em todo critério, checagens de formato, a regra anti-invenção na reescrita (nenhum número novo, nenhuma competência inserida), padronização de datas e a renderização das telas de wizard, resultado, impressão e erro.
 

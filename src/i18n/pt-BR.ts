@@ -57,7 +57,7 @@ export const t = {
     changes: 'O que mudamos',
     changesEmpty: 'Nenhum ajuste necessário no texto.',
     export: 'Exportar',
-    exportHelp: 'Antes de exportar, confira o checklist de formato.',
+    exportHelp: 'DOCX editável, PDF em coluna única e TXT. O arquivo sai como Nome-Sobrenome-Cargo.',
     copy: 'Copiar texto',
     copied: 'Copiado',
     print: 'Salvar como PDF',
@@ -68,6 +68,7 @@ export const t = {
     generic: 'Algo deu errado. Tente novamente.',
     empty: 'Não encontramos texto suficiente para analisar.',
     notFound: 'Análise não encontrada. Faça uma nova análise.',
+    exportFailed: 'Não foi possível gerar o arquivo. Tente novamente.',
   },
   status: { present: 'Presente', partial: 'Parcial', absent: 'Ausente' },
   kinds: {
