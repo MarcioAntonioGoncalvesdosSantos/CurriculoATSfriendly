@@ -131,6 +131,7 @@ O Lovable entrega uma versão em 30–60 segundos, e o refinamento é onde o pro
 ├── README.md          este arquivo
 ├── mega-prompt.md     prompt completo usado no Lovable (v2.0)
 ├── design-system.md   tokens de cor, tipografia, componentes e CSS de impressão
+├── roteiro-lovable.md mensagens fase a fase, com o que verificar em cada etapa
 └── .gitignore
 ```
 
@@ -139,6 +140,8 @@ O código da aplicação passa a viver aqui quando for exportado pelo Lovable (G
 ---
 
 ## 7. Como a aplicação é construída e publicada
+
+O passo a passo completo, mensagem por mensagem, está em [`roteiro-lovable.md`](./roteiro-lovable.md). Resumo:
 
 1. **Criar o projeto** no Lovable e colar [`mega-prompt.md`](./mega-prompt.md) na primeira mensagem. O modo *Plan* mostra a abordagem antes de gerar; o modo *Build* executa direto.
 2. **Colar [`design-system.md`](./design-system.md)** na mensagem seguinte com a instrução: *"Aplique exatamente estes tokens. Não invente cores."*
