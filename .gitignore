@@ -1,6 +1,9 @@
 .freebuff/
 .DS_Store
 node_modules/
+dist/
+coverage/
+*.log
 .env
 .env.*
 *.pem
