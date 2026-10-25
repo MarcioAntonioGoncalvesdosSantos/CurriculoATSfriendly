@@ -17,6 +17,16 @@ function goTo(hash: string) {
 }
 
 describe('telas', () => {
+  it('mostra a proposta e as três provas na landing', () => {
+    goTo('#/');
+    render(<App />);
+    expect(screen.getByText(/Descubra em 60 segundos/)).toBeTruthy();
+    expect(screen.getByText('Nota explicada')).toBeTruthy();
+    expect(screen.getByText('Diff lado a lado')).toBeTruthy();
+    expect(screen.getByText('Export pronto')).toBeTruthy();
+    expect(screen.getByText('A regra que vale para todo o app')).toBeTruthy();
+  });
+
   it('abre o wizard no primeiro passo', () => {
     goTo('#/app/nova');
     render(<App />);

@@ -114,6 +114,9 @@ export function Analysis() {
       {tab === 'diagnosis' ? (
         <Card className="mt-4">
           <CardTitle>{t.result.tabs.diagnosis}</CardTitle>
+          <p className="mb-2 text-xs text-muted-foreground">
+            Pesos fixos que somam 100 pontos. A evidência de cada perda de ponto aparece logo abaixo do critério.
+          </p>
           <div>
             {analysis.criteria.map((criterion) => (
               <CriteriaBar key={criterion.id} criterion={criterion} />

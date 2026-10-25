@@ -50,6 +50,44 @@ const ACTION_VERBS = new Set(
 
 const STATUS_WEIGHT: Record<MatchStatus, number> = { present: 1, partial: 0.5, absent: 0 };
 
+/** Fonte única dos seis critérios: rótulo, peso e regra de medição. */
+export const CRITERIA_INFO = {
+  keywords: {
+    label: 'Palavras-chave da vaga',
+    weight: WEIGHTS.keywords,
+    rule: 'Cobertura ponderada: requisito obrigatório vale 2, desejável vale 1.',
+  },
+  format: {
+    label: 'Formato e parseabilidade',
+    weight: WEIGHTS.format,
+    rule: 'Dez checagens binárias de 2 pontos cada.',
+  },
+  quantified: {
+    label: 'Resultados quantificados',
+    weight: WEIGHTS.quantified,
+    rule: 'Percentual de itens com número, %, R$ ou volume.',
+  },
+  cargo: {
+    label: 'Cargo e senioridade',
+    weight: WEIGHTS.cargo,
+    rule: 'Termos do título da vaga e senioridade declarada.',
+  },
+  structure: {
+    label: 'Estrutura e seções',
+    weight: WEIGHTS.structure,
+    rule: 'Seções padrão, contato no corpo e ordem cronológica.',
+  },
+  clarity: {
+    label: 'Clareza dos itens',
+    weight: WEIGHTS.clarity,
+    rule: 'Verbo de ação no início, até 2 linhas, sem “responsável por”.',
+  },
+} as const;
+
+export const CRITERIA_LIST = (Object.keys(CRITERIA_INFO) as (keyof typeof CRITERIA_INFO)[]).map(
+  (id) => ({ id, ...CRITERIA_INFO[id] }),
+);
+
 export function bandFor(score: number): ScoreBand {
   if (score >= 75) return 'high';
   if (score >= 50) return 'mid';
@@ -101,7 +139,7 @@ function keywordCriterion(keywords: KeywordResult[]): Criterion {
   if (keywords.length === 0) {
     return {
       id: 'keywords',
-      label: 'Palavras-chave da vaga',
+      label: CRITERIA_INFO.keywords.label,
       points: 0,
       max: WEIGHTS.keywords,
       evidence: ['Não encontramos requisitos identificáveis na vaga. Cole a descrição completa do anúncio.'],
@@ -128,7 +166,7 @@ function keywordCriterion(keywords: KeywordResult[]): Criterion {
   ];
   if (absentMust.length === 0) evidence.push('Todas as palavras-chave obrigatórias aparecem no currículo.');
 
-  return { id: 'keywords', label: 'Palavras-chave da vaga', points, max: WEIGHTS.keywords, evidence };
+  return { id: 'keywords', label: CRITERIA_INFO.keywords.label, points, max: WEIGHTS.keywords, evidence };
 }
 
 function formatCriterion(checks: ReturnType<typeof checkFormat>): Criterion {
@@ -136,7 +174,7 @@ function formatCriterion(checks: ReturnType<typeof checkFormat>): Criterion {
   const failed = checks.filter((check) => !check.passed);
   return {
     id: 'format',
-    label: 'Formato e parseabilidade',
+    label: CRITERIA_INFO.format.label,
     points: Math.round((checks.length - failed.length) * perCheck),
     max: WEIGHTS.format,
     evidence: failed.length
@@ -150,7 +188,7 @@ function quantifiedCriterion(cvText: string): Criterion {
   if (!bullets.length) {
     return {
       id: 'quantified',
-      label: 'Resultados quantificados',
+      label: CRITERIA_INFO.quantified.label,
       points: 0,
       max: WEIGHTS.quantified,
       evidence: ['Nenhuma linha de experiência identificada para avaliar resultados.'],
@@ -165,7 +203,7 @@ function quantifiedCriterion(cvText: string): Criterion {
 
   return {
     id: 'quantified',
-    label: 'Resultados quantificados',
+    label: CRITERIA_INFO.quantified.label,
     points: Math.round(ratio * WEIGHTS.quantified),
     max: WEIGHTS.quantified,
     evidence: [
@@ -205,7 +243,7 @@ function cargoCriterion(cvText: string, jobTitle: string, jobSeniority: string):
 
   return {
     id: 'cargo',
-    label: 'Cargo e senioridade',
+    label: CRITERIA_INFO.cargo.label,
     points: Math.min(titlePoints + seniorityPoints, WEIGHTS.cargo),
     max: WEIGHTS.cargo,
     evidence,
@@ -239,7 +277,7 @@ function structureCriterion(cvText: string): Criterion {
   if (!chronological) evidence.push('Períodos fora da ordem do mais recente para o mais antigo.');
   if (!evidence.length) evidence.push('Todas as seções padrão estão presentes, em ordem cronológica inversa.');
 
-  return { id: 'structure', label: 'Estrutura e seções', points, max: WEIGHTS.structure, evidence };
+  return { id: 'structure', label: CRITERIA_INFO.structure.label, points, max: WEIGHTS.structure, evidence };
 }
 
 function clarityCriterion(cvText: string): Criterion {
@@ -247,7 +285,7 @@ function clarityCriterion(cvText: string): Criterion {
   if (!bullets.length) {
     return {
       id: 'clarity',
-      label: 'Clareza dos itens',
+      label: CRITERIA_INFO.clarity.label,
       points: 0,
       max: WEIGHTS.clarity,
       evidence: ['Nenhum item de experiência em formato de bullet.'],
@@ -268,7 +306,7 @@ function clarityCriterion(cvText: string): Criterion {
 
   return {
     id: 'clarity',
-    label: 'Clareza dos itens',
+    label: CRITERIA_INFO.clarity.label,
     points: Math.round((good.length / bullets.length) * WEIGHTS.clarity),
     max: WEIGHTS.clarity,
     evidence: [
