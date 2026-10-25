@@ -65,7 +65,7 @@ export function Analysis() {
     try {
       setExportError(null);
       if (format === 'docx') await downloadDocx(rewrite, analysis.job.title);
-      if (format === 'pdf') downloadPdf(rewrite, analysis.job.title);
+      if (format === 'pdf') await downloadPdf(rewrite, analysis.job.title);
       if (format === 'txt') downloadTxt(rewrite, analysis.job.title);
     } catch {
       setExportError(t.errors.exportFailed);

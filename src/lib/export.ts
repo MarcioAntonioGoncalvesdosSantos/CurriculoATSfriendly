@@ -1,6 +1,14 @@
 import { Document, Packer, Paragraph, TextRun } from 'docx';
 import { jsPDF } from 'jspdf';
+import robotoBoldUrl from '../assets/fonts/Roboto-Bold.ttf?url';
+import robotoRegularUrl from '../assets/fonts/Roboto-Regular.ttf?url';
+import { sanitizeText } from './text';
 import type { RewriteResult } from './types';
+
+export interface PdfFonts {
+  regularBase64: string;
+  boldBase64: string;
+}
 
 function slug(value: string): string {
   return (
@@ -28,20 +36,50 @@ function download(blob: Blob, filename: string): void {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
+function toBase64(buffer: ArrayBuffer): string {
+  const bytes = new Uint8Array(buffer);
+  let binary = '';
+  const chunk = 0x8000;
+  for (let index = 0; index < bytes.length; index += chunk) {
+    binary += String.fromCharCode(...bytes.subarray(index, index + chunk));
+  }
+  return btoa(binary);
+}
+
+let cachedFonts: PdfFonts | null = null;
+
+async function loadRoboto(): Promise<PdfFonts | null> {
+  if (cachedFonts) return cachedFonts;
+  try {
+    const load = async (url: string) => {
+      const response = await fetch(url);
+      if (!response.ok) throw new Error(`fonte indisponível: ${response.status}`);
+      return toBase64(await response.arrayBuffer());
+    };
+    const [regularBase64, boldBase64] = await Promise.all([load(robotoRegularUrl), load(robotoBoldUrl)]);
+    cachedFonts = { regularBase64, boldBase64 };
+    return cachedFonts;
+  } catch {
+    return null;
+  }
+}
+
 /** TXT em texto puro, com as seções separadas por linha em branco. */
 export function buildTxt(result: RewriteResult): string {
-  return result.text;
+  return sanitizeText(result.text);
 }
 
 /** DOCX sem tabela e sem cabeçalho, no formato que o ATS extrai na ordem certa. */
 export async function buildDocxBlob(result: RewriteResult): Promise<Blob> {
   const children: Paragraph[] = [];
-  const [name, ...contact] = result.contact;
+  const [rawName, ...rawContact] = result.contact;
+  const name = rawName ? sanitizeText(rawName) : undefined;
+  const contact = rawContact.map((line) => sanitizeText(line));
 
   if (name) {
     children.push(
       new Paragraph({
-        children: [new TextRun({ text: name.toUpperCase(), bold: true, size: 32, font: 'Arial' })],
+        children: [new TextRun({ text: name.toUpperCase(), bold: true, size: 32, font: 'Roboto' })],
         spacing: { after: 80 },
       }),
     );
@@ -49,7 +87,7 @@ export async function buildDocxBlob(result: RewriteResult): Promise<Blob> {
   if (contact.length) {
     children.push(
       new Paragraph({
-        children: [new TextRun({ text: contact.join(' · '), size: 20, font: 'Arial' })],
+        children: [new TextRun({ text: contact.join(' · '), size: 20, font: 'Roboto' })],
         spacing: { after: 200 },
       }),
     );
@@ -58,14 +96,14 @@ export async function buildDocxBlob(result: RewriteResult): Promise<Blob> {
   for (const section of result.sections) {
     children.push(
       new Paragraph({
-        children: [new TextRun({ text: section.title, bold: true, size: 24, font: 'Arial' })],
+        children: [new TextRun({ text: sanitizeText(section.title), bold: true, size: 24, font: 'Roboto' })],
         spacing: { before: 240, after: 80 },
       }),
     );
     for (const line of section.lines) {
       children.push(
         new Paragraph({
-          children: [new TextRun({ text: `• ${line}`, size: 22, font: 'Arial' })],
+          children: [new TextRun({ text: `• ${sanitizeText(line)}`, size: 22, font: 'Roboto' })],
           spacing: { after: 40 },
         }),
       );
@@ -73,7 +111,7 @@ export async function buildDocxBlob(result: RewriteResult): Promise<Blob> {
   }
 
   const doc = new Document({
-    styles: { default: { document: { run: { font: 'Arial', size: 22 } } } },
+    styles: { default: { document: { run: { font: 'Roboto', size: 22 } } } },
     sections: [
       {
         properties: { page: { margin: { top: 1020, right: 1020, bottom: 1020, left: 1020 } } },
@@ -87,10 +125,25 @@ export async function buildDocxBlob(result: RewriteResult): Promise<Blob> {
 
 /**
  * PDF real (não é captura de tela): texto vetorial em coluna única, A4,
- * margem de 18 mm, Arial/Helvetica. É o formato que o ATS lê sem embaralhar.
+ * margem de 18 mm, Roboto embutida. É o formato que o ATS lê sem embaralhar.
  */
-export function buildPdfArrayBuffer(result: RewriteResult): ArrayBuffer {
+export async function buildPdfArrayBuffer(result: RewriteResult, fonts?: PdfFonts): Promise<ArrayBuffer> {
   const doc = new jsPDF({ unit: 'mm', format: 'a4', compress: true });
+
+  const embedded = fonts ?? (await loadRoboto());
+  let family = 'helvetica';
+  if (embedded) {
+    try {
+      doc.addFileToVFS('Roboto-Regular.ttf', embedded.regularBase64);
+      doc.addFont('Roboto-Regular.ttf', 'Roboto', 'normal');
+      doc.addFileToVFS('Roboto-Bold.ttf', embedded.boldBase64);
+      doc.addFont('Roboto-Bold.ttf', 'Roboto', 'bold');
+      family = 'Roboto';
+    } catch {
+      family = 'helvetica';
+    }
+  }
+
   const margin = 18;
   const pageBottom = 297 - margin;
   const maxWidth = 210 - margin * 2;
@@ -103,10 +156,12 @@ export function buildPdfArrayBuffer(result: RewriteResult): ArrayBuffer {
     }
   };
 
-  const [name, ...contact] = result.contact;
+  const [rawName, ...rawContact] = result.contact;
+  const name = rawName ? sanitizeText(rawName) : undefined;
+  const contact = rawContact.map((line) => sanitizeText(line));
 
   if (name) {
-    doc.setFont('helvetica', 'bold');
+    doc.setFont(family, 'bold');
     doc.setFontSize(14);
     ensure(8);
     doc.text(name.toUpperCase(), margin, y);
@@ -114,7 +169,7 @@ export function buildPdfArrayBuffer(result: RewriteResult): ArrayBuffer {
   }
 
   if (contact.length) {
-    doc.setFont('helvetica', 'normal');
+    doc.setFont(family, 'normal');
     doc.setFontSize(9.5);
     const contactLines = doc.splitTextToSize(contact.join(' · '), maxWidth) as string[];
     for (const line of contactLines) {
@@ -127,15 +182,15 @@ export function buildPdfArrayBuffer(result: RewriteResult): ArrayBuffer {
 
   for (const section of result.sections) {
     ensure(12);
-    doc.setFont('helvetica', 'bold');
+    doc.setFont(family, 'bold');
     doc.setFontSize(11);
-    doc.text(section.title, margin, y);
+    doc.text(sanitizeText(section.title), margin, y);
     y += 5;
 
-    doc.setFont('helvetica', 'normal');
+    doc.setFont(family, 'normal');
     doc.setFontSize(10.5);
     for (const item of section.lines) {
-      const wrapped = doc.splitTextToSize(`• ${item}`, maxWidth - 3) as string[];
+      const wrapped = doc.splitTextToSize(`• ${sanitizeText(item)}`, maxWidth - 3) as string[];
       for (const line of wrapped) {
         ensure(5);
         doc.text(line, margin + 3, y);
@@ -158,8 +213,8 @@ export async function downloadDocx(result: RewriteResult, jobTitle: string): Pro
   download(blob, `${fileBase(result, jobTitle)}.docx`);
 }
 
-export function downloadPdf(result: RewriteResult, jobTitle: string): void {
-  const buffer = buildPdfArrayBuffer(result);
+export async function downloadPdf(result: RewriteResult, jobTitle: string): Promise<void> {
+  const buffer = await buildPdfArrayBuffer(result);
   download(new Blob([buffer], { type: 'application/pdf' }), `${fileBase(result, jobTitle)}.pdf`);
 }
 

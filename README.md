@@ -123,8 +123,9 @@ O que **não** faz: criar empresa, cargo, data, formação, certificação, núm
 
 Os três botões (**DOCX**, **PDF**, **TXT**) ficam fixos no topo do resultado, visíveis em qualquer aba — não só na de reescrita.
 
-- `.docx` gerado no cliente (lib `docx`): Arial 11 pt, sem tabela, sem cabeçalho, títulos em parágrafo negrito.
-- `.pdf` gerado com `jspdf`: A4, margem 18 mm, coluna única, **texto vetorial** — não é captura de tela, então o ATS extrai o texto na ordem correta.
+- `.docx` gerado no cliente (lib `docx`): Roboto 11 pt, sem tabela, sem cabeçalho, títulos em parágrafo negrito.
+- `.pdf` gerado com `jspdf`: A4, margem 18 mm, coluna única, **texto vetorial** — não é captura de tela, então o ATS extrai o texto na ordem correta. A **Roboto vai embutida** no arquivo (TTF em `src/assets/fonts`, Apache 2.0), então o PDF abre igual em qualquer máquina.
+- **Ligaduras** (`ﬁ`, `ﬂ`, `ﬃ`) que vêm de PDFs originais são convertidas em letras normais antes da exportação — sem isso, "fiscal" saía como `ÿýscais` no meio da palavra.
 - `.txt` em texto puro.
 - Nome do arquivo: `Nome-Sobrenome-Cargo.ext`.
 - A rota `/print/:id` continua como pré-visualização de impressão.
@@ -163,6 +164,7 @@ Os três botões (**DOCX**, **PDF**, **TXT**) ficam fixos no topo do resultado, 
 ├── tsconfig.json
 ├── vercel.json                instalação, build e pasta de saída do deploy
 ├── scripts/gerar-exemplo.ts   gera os três arquivos fora do navegador
+├── src/assets/fonts/          Roboto Regular e Bold embutidas no PDF
 └── src/
     ├── App.tsx                rotas
     ├── main.tsx
@@ -195,7 +197,7 @@ O que foi de fato executado neste repositório:
 
 ```bash
 npx tsc --noEmit     # 0 erros
-npx vitest run       # 25 testes, 3 arquivos, todos passando
+npx vitest run       # 30 testes, 3 arquivos, todos passando
 npx vite build       # build de produção concluído
 ```
 

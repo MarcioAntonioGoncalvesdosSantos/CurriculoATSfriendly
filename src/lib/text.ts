@@ -1,5 +1,27 @@
 /** Utilidades puras de texto. Toda comparação do motor passa por aqui. */
 
+const LIGATURES: Record<string, string> = {
+  '\uFB00': 'ff',
+  '\uFB01': 'fi',
+  '\uFB02': 'fl',
+  '\uFB03': 'ffi',
+  '\uFB04': 'ffl',
+  '\uFB05': 'st',
+  '\uFB06': 'st',
+};
+
+/**
+ * PDFs extraídos por leitor automático trazem ligaduras (ﬁ, ﬂ) e caracteres
+ * invisíveis. Sem isso, "fiscal" vira "scais" com lixo na frente.
+ */
+export function sanitizeText(input: string): string {
+  return input
+    .replace(/[\uFB00-\uFB06]/g, (char) => LIGATURES[char] ?? char)
+    .replace(/[\u200B-\u200F\u202A-\u202E\uFEFF]/g, '')
+    .replace(/\u00A0/g, ' ')
+    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, '');
+}
+
 export function stripAccents(input: string): string {
   return input.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 }

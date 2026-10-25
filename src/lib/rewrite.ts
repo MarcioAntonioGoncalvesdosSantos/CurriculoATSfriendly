@@ -1,5 +1,5 @@
 import { splitSections } from './sections';
-import { normalize, stripBullet, hasDigits } from './text';
+import { hasDigits, normalize, sanitizeText, stripBullet } from './text';
 import type { Analysis, Change, CvSection, RewriteResult } from './types';
 
 const MONTHS: Record<string, string> = {
@@ -67,6 +67,28 @@ function cleanLine(raw: string): { text: string; change?: Change } {
   return { text };
 }
 
+/**
+ * Currículos exportados de PDF chegam com a frase quebrada em várias linhas:
+ * só a primeira começa com marcador. As demais são continuação do mesmo item.
+ */
+function joinWrappedLines(rawLines: string[]): string[] {
+  const result: string[] = [];
+  for (const raw of rawLines) {
+    const trimmed = raw.trim();
+    if (!trimmed) continue;
+    const isItem = /^[•▪●◦*–—-]/.test(trimmed);
+    const previous = result[result.length - 1];
+    const previousIsItem = previous ? /^[•▪●◦*–—-]/.test(previous) : false;
+    if (!isItem && previousIsItem) {
+      const joiner = /[-–—]$/.test(previous) ? '' : ' ';
+      result[result.length - 1] = `${previous}${joiner}${trimmed}`;
+      continue;
+    }
+    result.push(trimmed);
+  }
+  return result;
+}
+
 function dedupe(items: string[]): string[] {
   const seen = new Set<string>();
   const result: string[] = [];
@@ -84,7 +106,7 @@ function isContactLine(line: string): boolean {
 }
 
 export function rewriteCv(cvText: string, analysis: Analysis): RewriteResult {
-  const { header, sections } = splitSections(cvText);
+  const { header, sections } = splitSections(sanitizeText(cvText));
   const changes: Change[] = [];
   const pendencies: string[] = [];
 
@@ -101,7 +123,7 @@ export function rewriteCv(cvText: string, analysis: Analysis): RewriteResult {
   }
 
   const rewritten: CvSection[] = sections.map((section) => {
-    const cleaned = section.lines
+    const cleaned = joinWrappedLines(section.lines)
       .map((line) => cleanLine(line))
       .map((item) => {
         if (item.change) changes.push(item.change);
@@ -145,15 +167,33 @@ export function rewriteCv(cvText: string, analysis: Analysis): RewriteResult {
     return { id: section.id, title, lines };
   });
 
-  const ordered = [...rewritten].sort((a, b) => {
+  // O currículo pode repetir o mesmo título (RESUMO e OBJETIVO, por exemplo).
+  // Duas seções com o mesmo nome viram uma só, sem perder nenhuma linha.
+  const merged: CvSection[] = [];
+  for (const section of rewritten) {
+    const existing = merged.find((item) => item.id === section.id);
+    if (!existing) {
+      merged.push({ ...section, lines: [...section.lines] });
+      continue;
+    }
+    existing.lines = dedupe([...existing.lines, ...section.lines]);
+    changes.push({
+      type: 'moved',
+      before: `${section.title} (repetida)`,
+      after: section.title,
+      reason: 'Duas seções com o mesmo título foram unidas em uma só.',
+    });
+  }
+
+  const ordered = [...merged].sort((a, b) => {
     const indexA = ORDER.findIndex((id) => a.id.startsWith(id));
     const indexB = ORDER.findIndex((id) => b.id.startsWith(id));
     return (indexA === -1 ? 99 : indexA) - (indexB === -1 ? 99 : indexB);
   });
-  if (ordered.map((section) => section.id).join('|') !== rewritten.map((section) => section.id).join('|')) {
+  if (ordered.map((section) => section.id).join('|') !== merged.map((section) => section.id).join('|')) {
     changes.push({
       type: 'moved',
-      before: rewritten.map((section) => section.title).join(' → '),
+      before: merged.map((section) => section.title).join(' → '),
       after: ordered.map((section) => section.title).join(' → '),
       reason: 'Seções na ordem que o ATS espera.',
     });

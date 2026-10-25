@@ -4,6 +4,7 @@ import { extractJob } from './extract-jd';
 import { checkFormat } from './format';
 import { rewriteCv } from './rewrite';
 import { analyze, bandFor, WEIGHTS } from './score';
+import { splitSections } from './sections';
 import { normalize, numbersIn, phraseIn, similarity } from './text';
 
 describe('normalização', () => {
@@ -18,6 +19,29 @@ describe('normalização', () => {
 
   it('reconhece variações próximas', () => {
     expect(similarity('javascript', 'javascrpt')).toBeGreaterThan(0.88);
+  });
+});
+
+describe('cabeçalho', () => {
+  it('não confunde nome em caixa alta com título de seção', () => {
+    const comNomeMaiusculo = CV_SAMPLE.replace(
+      'Marcio Antonio Goncalves dos Santos',
+      'MARCIO ANTONIO GONCALVES DOS SANTOS',
+    );
+    const { header, sections } = splitSections(comNomeMaiusculo);
+    expect(header[0]).toBe('MARCIO ANTONIO GONCALVES DOS SANTOS');
+    expect(sections.some((section) => section.id.startsWith('custom'))).toBe(false);
+  });
+
+  it('reconhece os títulos compostos mais comuns', () => {
+    const { sections } = splitSections('RESUMO PROFISSIONAL\nTexto\nHABILIDADES E COMPETÊNCIAS\nSQL');
+    expect(sections.map((section) => section.id)).toEqual(['resumo', 'habilidades']);
+  });
+
+  it('ainda reconhece o primeiro título quando o currículo começa por ele', () => {
+    const { header, sections } = splitSections('RESUMO\nAnalista de dados com 6 anos de experiência.');
+    expect(header).toHaveLength(0);
+    expect(sections[0].id).toBe('resumo');
   });
 });
 

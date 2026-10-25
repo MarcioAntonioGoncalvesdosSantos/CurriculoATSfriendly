@@ -12,22 +12,41 @@ export interface SplitResult {
   sections: DetectedSection[];
 }
 
-const CANONICAL: { id: string; title: string; pattern: RegExp }[] = [
-  { id: 'resumo', title: 'Resumo Profissional', pattern: /^(resumo|objetivo|sobre mim|perfil profissional|perfil|summary|profile)/ },
-  { id: 'experiencia', title: 'Experiência Profissional', pattern: /^(experi[eê]ncia|historico profissional|histórico profissional|experiencia profissional|professional experience|experience)/ },
-  { id: 'formacao', title: 'Formação Acadêmica', pattern: /^(forma[cç][aã]o|educa[cç][aã]o|escolaridade|education|academic)/ },
-  { id: 'habilidades', title: 'Habilidades', pattern: /^(habilidades|compet[eê]ncias|conhecimentos|skills|qualifica[cç][oõ]es t[eé]cnicas)/ },
-  { id: 'idiomas', title: 'Idiomas', pattern: /^(idiomas|languages|language)/ },
-  { id: 'certificacoes', title: 'Certificações', pattern: /^(certifica[cç][oõ]es|certificados|cursos|certifications|licen[cç]as)/ },
-  { id: 'projetos', title: 'Projetos', pattern: /^(projetos|projects|portf[oó]lio)/ },
-  { id: 'realizacoes', title: 'Realizações', pattern: /^(realiza[cç][oõ]es|conquistas|achievements)/ },
+/**
+ * Chaves comparadas por igualdade com o texto normalizado (sem acento, sem
+ * plural). Comparar por igualdade evita que "Realizar separação de produtos"
+ * seja confundido com a seção "Realizações".
+ */
+const CANONICAL: { id: string; title: string; keys: string[] }[] = [
+  {
+    id: 'resumo',
+    title: 'Resumo Profissional',
+    keys: ['resumo', 'resumo profissional', 'objetivo', 'objetivo profissional', 'sobre mim', 'perfil', 'perfil profissional', 'summary', 'profile'],
+  },
+  {
+    id: 'experiencia',
+    title: 'Experiência Profissional',
+    keys: ['experiência', 'experiencia profissional', 'histórico profissional', 'professional experience', 'experience'],
+  },
+  { id: 'formacao', title: 'Formação Acadêmica', keys: ['formação', 'formação acadêmica', 'educação', 'escolaridade', 'education', 'academic background'] },
+  {
+    id: 'habilidades',
+    title: 'Habilidades',
+    keys: ['habilidades', 'habilidade', 'competências', 'competências técnicas', 'conhecimentos', 'habilidades e competências', 'skills', 'qualificações técnicas'],
+  },
+  { id: 'idiomas', title: 'Idiomas', keys: ['idiomas', 'idioma', 'languages', 'language'] },
+  { id: 'certificacoes', title: 'Certificações', keys: ['certificações', 'certificados', 'certificações e cursos', 'cursos', 'licenças', 'certifications'] },
+  { id: 'projetos', title: 'Projetos', keys: ['projetos', 'portfólio', 'projects', 'portfolio'] },
+  { id: 'realizacoes', title: 'Realizações', keys: ['realizações', 'conquistas', 'achievements'] },
 ];
 
 function canonicalFor(line: string): { id: string; title: string } | null {
-  const bare = line.replace(/[:\u2022\-–—]/g, ' ').trim();
-  const n = normalize(bare).toLowerCase();
+  const bare = line.replace(/[:\u2022\-–—]/g, ' ').replace(/\s+/g, ' ').trim();
+  const normalized = normalize(bare);
   for (const item of CANONICAL) {
-    if (item.pattern.test(n)) return { id: item.id, title: item.title };
+    if (item.keys.some((key) => normalize(key) === normalized)) {
+      return { id: item.id, title: item.title };
+    }
   }
   return null;
 }
@@ -40,8 +59,9 @@ function looksLikeHeading(line: string): boolean {
   if (/^\+?\d[\d\s()-]{7,}$/.test(bare)) return false;
   const words = bare.split(/\s+/).filter(Boolean);
   if (words.length > 5) return false;
-  const isUpper = bare === bare.toUpperCase() && /[A-ZÀ-Ú]/.test(bare);
-  return isUpper || canonicalFor(bare) !== null;
+  // "SQL" é competência, não título; um título desconhecido tem mais corpo.
+  if (words.length < 2 && bare.length < 8) return false;
+  return bare === bare.toUpperCase() && /[A-ZÀ-Ú]/.test(bare);
 }
 
 export function splitSections(text: string): SplitResult {
@@ -51,8 +71,12 @@ export function splitSections(text: string): SplitResult {
   let current: DetectedSection | null = null;
 
   for (const line of all) {
-    if (looksLikeHeading(line)) {
-      const canonical = canonicalFor(line);
+    const canonical = canonicalFor(line);
+    // A primeira linha costuma ser o nome em caixa alta — não é título de seção.
+    const isFirstLine = sections.length === 0 && header.length === 0;
+    const isHeading = canonical !== null || (!isFirstLine && looksLikeHeading(line));
+
+    if (isHeading) {
       current = {
         id: canonical?.id ?? `custom-${normalize(line).slice(0, 24)}`,
         title: canonical?.title ?? line.trim(),

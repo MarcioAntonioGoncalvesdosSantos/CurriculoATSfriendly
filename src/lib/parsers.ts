@@ -1,3 +1,5 @@
+import { sanitizeText } from './text';
+
 export class ParseError extends Error {
   code: 'scanned' | 'unsupported' | 'size';
   constructor(code: ParseError['code'], message: string) {
@@ -13,6 +15,11 @@ export async function extractTextFromFile(file: File): Promise<string> {
   if (file.size > MAX_FILE_BYTES) {
     throw new ParseError('size', 'O arquivo tem mais de 5 MB. Envie uma versão menor ou cole o texto.');
   }
+
+  return sanitizeText(await readFileText(file));
+}
+
+async function readFileText(file: File): Promise<string> {
 
   const name = file.name.toLowerCase();
   const buffer = await file.arrayBuffer();
