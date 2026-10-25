@@ -46,6 +46,24 @@ function toBase64(buffer: ArrayBuffer): string {
   return btoa(binary);
 }
 
+/**
+ * As fontes padrão do PDF só conhecem Latin-1. Quando a Roboto não carrega,
+ * qualquer caractere fora dessa faixa viraria "?" no arquivo. Aqui ele é
+ * trocado por um equivalente legível antes de chegar ao PDF.
+ */
+export function toWinAnsiSafe(input: string): string {
+  const text = sanitizeText(input)
+    .replace(/[\u2018\u2019\u201A\u201B\u2032]/g, "'")
+    .replace(/[\u201C\u201D\u201E\u201F\u2033]/g, '"')
+    .replace(/[\u2010\u2011\u2012\u2013\u2014\u2015]/g, '-')
+    .replace(/\u2026/g, '...')
+    .replace(/[\u2022\u00B7\u25CF]/g, '-')
+    .replace(/[\u2192\u21D2]/g, '->')
+    .replace(/[\u2212]/g, '-')
+    .replace(/[^\x20-\xFF\n]/g, '');
+  return text;
+}
+
 let cachedFonts: PdfFonts | null = null;
 
 async function loadRoboto(): Promise<PdfFonts | null> {
@@ -132,6 +150,8 @@ export async function buildPdfArrayBuffer(result: RewriteResult, fonts?: PdfFont
 
   const embedded = fonts ?? (await loadRoboto());
   let family = 'helvetica';
+  // Só a fonte embutida desenha qualquer caractere; a padrão precisa de texto seguro.
+  const fit = (value: string) => (family === 'Roboto' ? sanitizeText(value) : toWinAnsiSafe(value));
   if (embedded) {
     try {
       doc.addFileToVFS('Roboto-Regular.ttf', embedded.regularBase64);
@@ -164,14 +184,14 @@ export async function buildPdfArrayBuffer(result: RewriteResult, fonts?: PdfFont
     doc.setFont(family, 'bold');
     doc.setFontSize(14);
     ensure(8);
-    doc.text(name.toUpperCase(), margin, y);
+    doc.text(fit(name.toUpperCase()), margin, y);
     y += 6.5;
   }
 
   if (contact.length) {
     doc.setFont(family, 'normal');
     doc.setFontSize(9.5);
-    const contactLines = doc.splitTextToSize(contact.join(' · '), maxWidth) as string[];
+    const contactLines = doc.splitTextToSize(fit(contact.join(' · ')), maxWidth) as string[];
     for (const line of contactLines) {
       ensure(5);
       doc.text(line, margin, y);
@@ -184,13 +204,13 @@ export async function buildPdfArrayBuffer(result: RewriteResult, fonts?: PdfFont
     ensure(12);
     doc.setFont(family, 'bold');
     doc.setFontSize(11);
-    doc.text(sanitizeText(section.title), margin, y);
+    doc.text(fit(section.title), margin, y);
     y += 5;
 
     doc.setFont(family, 'normal');
     doc.setFontSize(10.5);
     for (const item of section.lines) {
-      const wrapped = doc.splitTextToSize(`• ${sanitizeText(item)}`, maxWidth - 3) as string[];
+      const wrapped = doc.splitTextToSize(`• ${fit(item)}`, maxWidth - 3) as string[];
       for (const line of wrapped) {
         ensure(5);
         doc.text(line, margin + 3, y);

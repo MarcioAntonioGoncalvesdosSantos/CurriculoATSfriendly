@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { CV_SAMPLE, JOB_SAMPLE } from './fixtures';
 import { analyze } from './score';
 import { rewriteCv } from './rewrite';
-import { buildDocxBlob, buildPdfArrayBuffer, buildTxt, fileBase } from './export';
+import { buildDocxBlob, buildPdfArrayBuffer, buildTxt, fileBase, toWinAnsiSafe } from './export';
 import { sanitizeText } from './text';
 
 const analysis = analyze(CV_SAMPLE, JOB_SAMPLE);
@@ -23,6 +23,20 @@ describe('ligaduras', () => {
     const local = rewriteCv(cv, analyze(cv, JOB_SAMPLE));
     expect(buildTxt(local)).not.toMatch(/[\uFB00-\uFB06]/);
     expect(buildTxt(local)).toContain('verificar notas fiscais');
+  });
+});
+
+describe('texto seguro para a fonte padrão', () => {
+  it('troca aspas, travessões e reticências por equivalentes legíveis', () => {
+    expect(toWinAnsiSafe('“aspas” e ‘simples’ – travessão — fim…')).toBe('"aspas" e \'simples\' - travessão - fim...');
+  });
+
+  it('não deixa caractere que viraria interrogação', () => {
+    const entrada = 'meta ≥ 30% → resultado • item ✓ ítem';
+    const saida = toWinAnsiSafe(entrada);
+    expect(saida).not.toContain('?');
+    expect(saida).toContain('meta');
+    expect(saida).toContain('30%');
   });
 });
 
