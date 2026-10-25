@@ -40,6 +40,24 @@ describe('texto seguro para a fonte padrão', () => {
   });
 });
 
+describe('exportação com texto quebrado', () => {
+  it('o arquivo sai sem interrogação mesmo se o texto de entrada tiver', async () => {
+    const quebrado: typeof rewrite = {
+      ...rewrite,
+      text: 'EXPERIÊNCIA PROFISSIONAL\n• Emitir as notas ?scais e veri?car os dados',
+      sections: [
+        { id: 'experiencia', title: 'EXPERIÊNCIA PROFISSIONAL', lines: ['Emitir as notas ?scais e veri?car os dados'] },
+      ],
+    };
+
+    expect(buildTxt(quebrado)).toContain('notas fiscais e verificar');
+    expect(buildTxt(quebrado)).not.toContain('?');
+
+    const buffer = await buildPdfArrayBuffer(quebrado);
+    expect(bytesOf(buffer, 5)).toBe('%PDF-');
+  });
+});
+
 describe('exportação', () => {
   it('TXT traz as seções e o nome do arquivo é legível', () => {
     const txt = buildTxt(rewrite);

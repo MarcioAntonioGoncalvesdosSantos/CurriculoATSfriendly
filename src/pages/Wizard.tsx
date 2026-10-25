@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, ArrowRight, Loader2, ShieldCheck } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, ArrowRight, Loader2, ShieldCheck } from 'lucide-react';
 import { Dropzone } from '../components/Dropzone';
 import { Stepper } from '../components/Stepper';
 import { Button, Card, CardTitle, Textarea } from '../components/ui';
 import { t } from '../i18n/pt-BR';
+import { countBroken, repairBrokenText } from '../lib/repair';
 import { analyze } from '../lib/score';
 import { rewriteCv } from '../lib/rewrite';
 import { readDraft, saveAnalysis, writeDraft } from '../state/store';
@@ -27,18 +28,28 @@ export function Wizard() {
 
   const cvReady = cvText.trim().length >= 200 && cvText.length <= MAX_CV;
   const jobReady = jobText.trim().length >= 100 && jobText.length <= MAX_JOB;
+  const brokenCount = countBroken(cvText);
 
   function run() {
     setBusy(true);
     setStep(3);
     window.setTimeout(() => {
       try {
-        const analysis = analyze(cvText, jobText);
-        const rewrite = rewriteCv(cvText, analysis);
-        const after = analyze(rewrite.text, jobText);
+        // Letras perdidas na camada de texto do arquivo ("?", "ÿý") são
+        // restauradas antes da análise, senão o defeito viaja para os arquivos.
+        const cvFixed = repairBrokenText(cvText);
+        const jobFixed = repairBrokenText(jobText);
+        const analysis = analyze(cvFixed.text, jobFixed.text);
+        const rewrite = rewriteCv(cvFixed.text, analysis);
+        if (cvFixed.fixes.length > 0) {
+          rewrite.pendencies.unshift(
+            `${cvFixed.fixes.length} trecho(s) chegaram ilegíveis do arquivo e foram restaurados com “fi”. Confira as palavras afetadas: a letra tinha se perdido na origem.`,
+          );
+        }
+        const after = analyze(rewrite.text, jobFixed.text);
         const stored = saveAnalysis({
-          cvText,
-          jobText,
+          cvText: cvFixed.text,
+          jobText: jobFixed.text,
           analysis,
           rewrite,
           scoreAfter: after.score,
@@ -76,6 +87,16 @@ export function Wizard() {
             <span>{cvText.length.toLocaleString('pt-BR')} / {MAX_CV.toLocaleString('pt-BR')} caracteres</span>
             {!cvReady ? <span>{t.wizard.emptyCv}</span> : <span>{fileName ?? 'Texto colado'}</span>}
           </div>
+
+          {brokenCount > 0 ? (
+            <p className="mt-3 flex items-start gap-2 rounded-md border border-warning-500/30 bg-warning-100 p-2 text-xs text-warning-700" role="status">
+              <AlertTriangle size={14} className="mt-0.5 shrink-0" aria-hidden />
+              <span>
+                {brokenCount} trecho(s) vieram com caractere ilegível — a letra se perdeu no arquivo original.
+                Vamos restaurar como “fi” na análise. Se puder, cole o texto ou envie o DOCX para não depender da leitura do PDF.
+              </span>
+            </p>
+          ) : null}
           <div className="mt-5 flex justify-end">
             <Button disabled={!cvReady} onClick={() => setStep(2)}>
               {t.wizard.next}

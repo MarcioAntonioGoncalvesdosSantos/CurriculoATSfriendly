@@ -2,6 +2,7 @@ import { Document, Packer, Paragraph, TextRun } from 'docx';
 import { jsPDF } from 'jspdf';
 import robotoBoldUrl from '../assets/fonts/Roboto-Bold.ttf?url';
 import robotoRegularUrl from '../assets/fonts/Roboto-Regular.ttf?url';
+import { repairBrokenText } from './repair';
 import { sanitizeText } from './text';
 import type { RewriteResult } from './types';
 
@@ -95,17 +96,20 @@ export async function embeddedFontStatus(options: { retry?: boolean } = {}): Pro
   return fonts !== null;
 }
 
+/** Repara caracteres perdidos na origem antes de escrever qualquer arquivo. */
+const clean = (value: string): string => repairBrokenText(value).text;
+
 /** TXT em texto puro, com as seções separadas por linha em branco. */
 export function buildTxt(result: RewriteResult): string {
-  return sanitizeText(result.text);
+  return clean(result.text);
 }
 
 /** DOCX sem tabela e sem cabeçalho, no formato que o ATS extrai na ordem certa. */
 export async function buildDocxBlob(result: RewriteResult): Promise<Blob> {
   const children: Paragraph[] = [];
   const [rawName, ...rawContact] = result.contact;
-  const name = rawName ? sanitizeText(rawName) : undefined;
-  const contact = rawContact.map((line) => sanitizeText(line));
+  const name = rawName ? clean(rawName) : undefined;
+  const contact = rawContact.map((line) => clean(line));
 
   if (name) {
     children.push(
@@ -127,14 +131,14 @@ export async function buildDocxBlob(result: RewriteResult): Promise<Blob> {
   for (const section of result.sections) {
     children.push(
       new Paragraph({
-        children: [new TextRun({ text: sanitizeText(section.title), bold: true, size: 24, font: 'Roboto' })],
+        children: [new TextRun({ text: clean(section.title), bold: true, size: 24, font: 'Roboto' })],
         spacing: { before: 240, after: 80 },
       }),
     );
     for (const line of section.lines) {
       children.push(
         new Paragraph({
-          children: [new TextRun({ text: `• ${sanitizeText(line)}`, size: 22, font: 'Roboto' })],
+          children: [new TextRun({ text: `• ${clean(line)}`, size: 22, font: 'Roboto' })],
           spacing: { after: 40 },
         }),
       );
@@ -164,7 +168,7 @@ export async function buildPdfArrayBuffer(result: RewriteResult, fonts?: PdfFont
   const embedded = fonts ?? (await loadRoboto());
   let family = 'helvetica';
   // Só a fonte embutida desenha qualquer caractere; a padrão precisa de texto seguro.
-  const fit = (value: string) => (family === 'Roboto' ? sanitizeText(value) : toWinAnsiSafe(value));
+  const fit = (value: string) => (family === 'Roboto' ? clean(value) : toWinAnsiSafe(clean(value)));
   if (embedded) {
     try {
       doc.addFileToVFS('Roboto-Regular.ttf', embedded.regularBase64);
@@ -190,8 +194,8 @@ export async function buildPdfArrayBuffer(result: RewriteResult, fonts?: PdfFont
   };
 
   const [rawName, ...rawContact] = result.contact;
-  const name = rawName ? sanitizeText(rawName) : undefined;
-  const contact = rawContact.map((line) => sanitizeText(line));
+  const name = rawName ? clean(rawName) : undefined;
+  const contact = rawContact.map((line) => clean(line));
 
   if (name) {
     doc.setFont(family, 'bold');
