@@ -64,10 +64,14 @@ export function toWinAnsiSafe(input: string): string {
   return text;
 }
 
-let cachedFonts: PdfFonts | null = null;
+let fontsRequest: Promise<PdfFonts | null> | null = null;
 
 async function loadRoboto(): Promise<PdfFonts | null> {
-  if (cachedFonts) return cachedFonts;
+  if (!fontsRequest) fontsRequest = fetchRoboto();
+  return fontsRequest;
+}
+
+async function fetchRoboto(): Promise<PdfFonts | null> {
   try {
     const load = async (url: string) => {
       const response = await fetch(url);
@@ -75,11 +79,20 @@ async function loadRoboto(): Promise<PdfFonts | null> {
       return toBase64(await response.arrayBuffer());
     };
     const [regularBase64, boldBase64] = await Promise.all([load(robotoRegularUrl), load(robotoBoldUrl)]);
-    cachedFonts = { regularBase64, boldBase64 };
-    return cachedFonts;
+    return { regularBase64, boldBase64 };
   } catch {
     return null;
   }
+}
+
+/**
+ * Informa se a Roboto embutida está disponível. Sem ela o PDF sai com a fonte
+ * padrão e os símbolos são convertidos — por isso a tela avisa o usuário.
+ */
+export async function embeddedFontStatus(options: { retry?: boolean } = {}): Promise<boolean> {
+  if (options.retry) fontsRequest = null;
+  const fonts = await loadRoboto();
+  return fonts !== null;
 }
 
 /** TXT em texto puro, com as seções separadas por linha em branco. */

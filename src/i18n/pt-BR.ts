@@ -58,6 +58,10 @@ export const t = {
     changesEmpty: 'Nenhum ajuste necessário no texto.',
     export: 'Exportar',
     exportHelp: 'DOCX editável, PDF em coluna única e TXT. O arquivo sai como Nome-Sobrenome-Cargo.',
+    fontFallbackTitle: 'Fonte Roboto não carregada',
+    fontFallback:
+      'O PDF ainda será gerado, mas com a fonte padrão do sistema e sem símbolos como aspas curvas e travessões. O texto continua legível para o ATS.',
+    retry: 'Tentar novamente',
     copy: 'Copiar texto',
     copied: 'Copiado',
     print: 'Salvar como PDF',

@@ -1,13 +1,13 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { Copy, Download, FileDown, FileText, Printer, ShieldCheck } from 'lucide-react';
+import { AlertTriangle, Copy, Download, FileDown, FileText, Printer, ShieldCheck } from 'lucide-react';
 import { CriteriaBar } from '../components/CriteriaBar';
 import { KeywordChip } from '../components/KeywordChip';
 import { ScoreRing } from '../components/ScoreRing';
 import { Badge, Button, Card, CardTitle, EmptyState } from '../components/ui';
 import { t } from '../i18n/pt-BR';
 import { lineDiff } from '../lib/diff';
-import { downloadDocx, downloadPdf, downloadTxt } from '../lib/export';
+import { downloadDocx, downloadPdf, downloadTxt, embeddedFontStatus } from '../lib/export';
 import type { KeywordResult } from '../lib/types';
 import { getAnalysis } from '../state/store';
 
@@ -26,6 +26,17 @@ export function Analysis() {
   const [tab, setTab] = useState<Tab>('diagnosis');
   const [copied, setCopied] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
+  const [fontReady, setFontReady] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    void embeddedFontStatus().then((ready) => {
+      if (active) setFontReady(ready);
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   if (!record) {
     return (
@@ -130,6 +141,29 @@ export function Analysis() {
           <p className="mt-2 text-sm text-danger-700" role="alert">
             {exportError}
           </p>
+        ) : null}
+
+        {fontReady === false ? (
+          <div
+            className="mt-3 flex flex-col gap-2 rounded-md border border-warning-500/30 bg-warning-100 p-3 sm:flex-row sm:items-start sm:justify-between"
+            role="status"
+          >
+            <p className="flex items-start gap-2 text-sm text-warning-700">
+              <AlertTriangle size={16} className="mt-0.5 shrink-0" aria-hidden />
+              <span>
+                <span className="font-medium">{t.result.fontFallbackTitle}. </span>
+                {t.result.fontFallback}
+              </span>
+            </p>
+            <Button
+              size="sm"
+              variant="secondary"
+              className="shrink-0"
+              onClick={() => void embeddedFontStatus({ retry: true }).then(setFontReady)}
+            >
+              {t.result.retry}
+            </Button>
+          </div>
         ) : null}
       </Card>
 
