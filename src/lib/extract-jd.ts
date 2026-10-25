@@ -2,10 +2,12 @@ import { TAXONOMY, typeForTerm } from './taxonomy';
 import { lines, normalize, phraseIn, stripBullet } from './text';
 import type { JobDescription, Obligatoriness, Requirement } from './types';
 
-const MUST_SECTION = /^(requisitos|requisito|qualifica|o que esperamos|o que buscamos|voc[eê] precisa|necess[aá]rio|must have|required|perfil da vaga|perfil desejado)/;
-const NICE_SECTION = /^(desej|diferenc|plus|nice to have|preferred|seria um diferencial|n[aã]o obrigat)/;
-const RESP_SECTION = /^(responsabilidades|atribui|o que voc[eê] vai fazer|atividades|activities|desafios)/;
-const OTHER_SECTION = /^(benef[ií]cios|oferecemos|sobre a empresa|sobre n[oó]s|informa[cç][oõ]es|localiza|modelo de trabalho|jornada)/;
+// Os padrões são testados contra o texto já normalizado (minúsculo, sem acento
+// e com o plural reduzido), por isso aparecem na forma singular.
+const MUST_SECTION = /^(requisito|qualificacao|o que esperamo|o que buscamo|voce precisa|necessario|must have|required|perfil)/;
+const NICE_SECTION = /^(desej|diferenc|plus|nice to have|preferred|seria um diferencial|nao obrigat)/;
+const RESP_SECTION = /^(responsabilidade|atribui|o que voce vai fazer|atividade|activities|desafio)/;
+const OTHER_SECTION = /^(beneficio|oferecemo|sobre a empresa|sobre no|informacao|localiza|modelo de trabalho|jornada)/;
 
 const NICE_CUE = /(desej|diferencial|plus|nice to have|preferred|seria interessante|n[aã]o [eé] obrigat)/;
 

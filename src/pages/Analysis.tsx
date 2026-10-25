@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { AlertTriangle, Copy, Download, FileDown, FileText, Printer, ShieldCheck } from 'lucide-react';
 import { CriteriaBar } from '../components/CriteriaBar';
 import { KeywordChip } from '../components/KeywordChip';
@@ -23,7 +23,9 @@ const TABS: { id: Tab; label: string }[] = [
 export function Analysis() {
   const { id } = useParams<{ id: string }>();
   const record = useMemo(() => (id ? getAnalysis(id) : null), [id]);
-  const [tab, setTab] = useState<Tab>('diagnosis');
+  const [search, setSearch] = useSearchParams();
+  const tabParam = search.get('tab') as Tab | null;
+  const [tab, setTab] = useState<Tab>(TABS.some((item) => item.id === tabParam) ? (tabParam as Tab) : 'diagnosis');
   const [copied, setCopied] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
   const [fontReady, setFontReady] = useState<boolean | null>(null);
@@ -173,7 +175,10 @@ export function Analysis() {
             key={item.id}
             role="tab"
             aria-selected={tab === item.id}
-            onClick={() => setTab(item.id)}
+            onClick={() => {
+              setTab(item.id);
+              setSearch({ tab: item.id }, { replace: true });
+            }}
             className={`-mb-px border-b-2 px-3 py-2 text-sm font-medium transition-colors ${
               tab === item.id
                 ? 'border-primary text-foreground'

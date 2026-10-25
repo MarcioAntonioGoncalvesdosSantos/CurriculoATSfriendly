@@ -63,6 +63,22 @@ describe('extração da vaga', () => {
   it('não inventa requisito ausente do texto', () => {
     expect(job.requirements.some((item) => /kubernetes/i.test(item.term))).toBe(false);
   });
+
+  it('reconhece os cabeçalhos de bloco no plural e não os toma por requisito', () => {
+    const plural = extractJob(
+      [
+        'Vaga: Analista de Dados',
+        'Requisitos:',
+        'Python e SQL',
+        'Desejável:',
+        'Azure',
+        'Responsabilidades:',
+        'Construir dashboards e relatórios',
+      ].join('\n'),
+    );
+    expect(plural.requirements.some((item) => /responsabilidade|construir/i.test(item.term))).toBe(false);
+    expect(plural.requirements.find((item) => item.term === 'Azure')?.obligatoriness).toBe('nice_to_have');
+  });
 });
 
 describe('nota', () => {

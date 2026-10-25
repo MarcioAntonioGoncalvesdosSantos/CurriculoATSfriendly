@@ -38,6 +38,34 @@ npm run build    # gera dist/
 
 O build na Vercel roda `npm ci` e `npm run build` (que executa o typecheck antes de compilar) e publica a pasta `dist`, conforme o [`vercel.json`](./vercel.json).
 
+### Prints da aplicação
+
+Capturados com o Firefox real, dirigido por `scripts/prints.ts` (Selenium + geckodriver) contra o build de produção.
+
+**Diagnóstico — nota, pesos e evidência de cada perda de ponto**
+
+![Diagnóstico com nota 69, seis critérios e evidências](docs/prints/03-diagnostico.png)
+
+**Palavras-chave — o que a vaga pede e o que o currículo já tem**
+
+![Palavras-chave separadas em obrigatórias ausentes, desejáveis ausentes e presentes](docs/prints/04-palavras-chave.png)
+
+**Reescrita — diff antes/depois, motivo de cada mudança e pendências**
+
+![Diff lado a lado com o motivo das mudanças](docs/prints/06-reescrita.png)
+
+**Formato — as dez checagens de parseabilidade**
+
+![Checagens de formato ATS](docs/prints/05-formato.png)
+
+**Entrada — wizard de três passos**
+
+![Passo de envio do currículo](docs/prints/02-curriculo.png)
+
+**Landing**
+
+![Página inicial com os seis critérios e seus pesos](docs/prints/01-landing.png)
+
 *(Se você reconstruir a versão no Lovable, o endereço `*.lovable.app` entra aqui também.)*
 
 ---
@@ -164,6 +192,8 @@ Os três botões (**DOCX**, **PDF**, **TXT**) ficam fixos no topo do resultado, 
 ├── tsconfig.json
 ├── vercel.json                instalação, build e pasta de saída do deploy
 ├── scripts/gerar-exemplo.ts   gera os três arquivos fora do navegador
+├── scripts/prints.ts          captura os prints com o Firefox (Selenium)
+├── docs/prints/               prints usados neste README
 ├── src/assets/fonts/          Roboto Regular e Bold embutidas no PDF
 └── src/
     ├── App.tsx                rotas
@@ -230,8 +260,8 @@ Os testes cobrem: normalização e sinônimos, extração de requisitos (obrigat
 - [x] Todo arquivo e pasta citado neste README existe e tem conteúdo
 - [x] Aplicação publicada na Vercel e abrindo para quem tem o endereço
 - [x] Endereço da aplicação na seção 2
+- [x] Prints da análise e exemplo de uso anexados (seção 2)
 - [ ] **Nome do repositório em minúsculas, sem acento** — renomear para `curriculo-ats-friendly` em *Settings → Repository name*
-- [ ] Prints da análise e exemplo de uso anexados
 
 ---
 
