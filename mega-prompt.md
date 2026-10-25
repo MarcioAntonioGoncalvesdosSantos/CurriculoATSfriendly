@@ -1,7 +1,10 @@
 # Mega Prompt — "Radar ATS" (Lovable)
 
-> **Como usar:** cole o bloco abaixo no Lovable em **uma mensagem inicial** (ou divida nas 5 fases da seção 19, se o editor cortar). Depois cole `02-design-system.md` na conversa e diga: *"Aplique exatamente os tokens deste design system. Não invente cores."*
-> O bloco é autossuficiente: produto, regras do motor de análise, contratos de IA, modelo de dados e critérios de aceite.
+**Versão 2.0** · desafio DIO "Entendendo o Desafio ATS Friendly" · ferramenta: [lovable.dev](https://lovable.dev)
+
+> **Como usar:** cole o bloco abaixo no Lovable em **uma mensagem inicial** (ou divida nas 5 fases da seção 19, se o editor cortar). Depois cole `design-system.md` na conversa e diga: *"Aplique exatamente os tokens deste design system. Não invente cores."*
+>
+> O bloco é autossuficiente: produto, telas, fluxo, motor de análise, contratos de IA, modelo de dados e critérios de aceite. O histórico do que mudou entre a versão 1.0 e esta está no `README.md`.
 
 ---
 
@@ -46,6 +49,8 @@ Tom de voz: direto, técnico sem jargão, sem culpar o usuário, sem promessas a
 9. Histórico de análises (até 10 no plano free) + exclusão de dados.
 10. Auth (e-mail/senha + Google) e plano free com limite de 3 análises/mês.
 
+> O desafio pede o núcleo primeiro: colar vaga → colar currículo → match + palavras-chave encontradas e ausentes → currículo ajustado pronto para exportar. Se o tempo for curto, entregue o núcleo publicável e só depois os itens 9 e 10.
+
 **Fase 2 (não construir agora, apenas deixar a arquitetura pronta):** comparação com múltiplas vagas, carta de apresentação, versões por vaga, LinkedIn optimizer, plano pago.
 
 **Fora de escopo:** recrutamento, banco de vagas, mentoria, geração de currículo do zero.
@@ -81,6 +86,10 @@ Siga o arquivo de design system que vou colar depois. Resumo vinculante:
 /app/conta            Perfil, plano, exclusão de dados
 ```
 Wizard em 3 passos com barra de progresso, estado persistido em `sessionStorage` (rascunho sobrevive a reload). Botão voltar sempre ativo. Passo 3 mostra skeleton com etapas nomeadas ("Extraindo texto", "Lendo a vaga", "Cruzando requisitos", "Calculando nota").
+
+**Aviso permanente na interface (obrigatório em 2 lugares):** uma faixa discreta, com ícone `ShieldCheck`, na tela de resultado e ao lado dos botões de exportação, com o texto fixo:
+
+> **Reescrevemos a forma, nunca os fatos.** O ajuste reorganiza e prioriza o que já existe no seu currículo. Nenhuma empresa, data, formação ou número é inventado.
 
 ### 8. Motor de análise — nota de compatibilidade (determinístico)
 
@@ -141,7 +150,7 @@ A saída deve ser um currículo **em texto puro estruturado**, sem layout decora
 
 ### 11. Guardrails (inegociáveis)
 
-1. **Zero invenção.** Se a informação não está no currículo, ela não entra na saída. Sem exceção.
+1. **Zero invenção.** Se a informação não está no currículo, ela não entra na saída. Sem exceção. Essa regra é **escrita na própria interface** (seção 7), não só seguida em silêncio.
 2. **Diff sempre visível.** Toda alteração é apresentada como adição (verde), remoção (vermelho) ou movida, com aceite individual.
 3. **Nada de nota sem evidência.** Toda perda de ponto aponta o trecho ou a ausência.
 4. **PII:** o arquivo do currículo é processado no navegador e nunca armazenado; o texto é guardado cifrado em repouso do Supabase com RLS por `user_id`; retenção de 30 dias com exclusão automática e botão "Apagar meus dados" (LGPD). Checkbox de consentimento antes da primeira análise.
