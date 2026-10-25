@@ -25,6 +25,8 @@ A regra que atravessa o produto inteiro, e que está escrita na própria interfa
 
 ## 2. Aplicação
 
+**No ar:** **[curriculo-ats-friendly.vercel.app](https://curriculo-ats-friendly.vercel.app/)** — projeto `puc4/curriculo-ats-friendly` na Vercel, conectado a este repositório: todo push na `main` gera uma nova versão de produção.
+
 **Rodando localmente:**
 
 ```bash
@@ -34,9 +36,9 @@ npm test         # 20 testes do motor e das telas
 npm run build    # gera dist/
 ```
 
-**Publicada:** `https://[usuario].github.io/CurriculoATSfriendly/` — preencher após ativar o GitHub Pages em *Settings → Pages → Source: GitHub Actions*. O workflow `deploy.yml` já roda testes, compila e publica a cada push na `main`.
+O build na Vercel roda `npm ci` e `npm run build` (que executa o typecheck antes de compilar) e publica a pasta `dist`, conforme o [`vercel.json`](./vercel.json).
 
-*(Se você reconstruir a versão no Lovable, o endereço `*.lovable.app` entra aqui.)*
+*(Se você reconstruir a versão no Lovable, o endereço `*.lovable.app` entra aqui também.)*
 
 ---
 
@@ -155,8 +157,7 @@ O que **não** faz: criar empresa, cargo, data, formação, certificação, núm
 ├── vite.config.ts             build + configuração dos testes
 ├── tailwind.config.js         tokens do design system no Tailwind
 ├── tsconfig.json
-├── .github/workflows/
-│   └── deploy.yml             testa, compila e publica no GitHub Pages
+├── vercel.json                instalação, build e pasta de saída do deploy
 └── src/
     ├── App.tsx                rotas
     ├── main.tsx
@@ -214,10 +215,10 @@ Os testes cobrem: normalização e sinônimos, extração de requisitos (obrigat
 - [x] Código da aplicação no repositório, com testes passando
 - [x] Nenhuma chave, token ou senha versionada
 - [x] Todo arquivo e pasta citado neste README existe e tem conteúdo
+- [x] Aplicação publicada na Vercel e abrindo para quem tem o endereço
+- [x] Endereço da aplicação na seção 2
 - [ ] **Nome do repositório em minúsculas, sem acento** — renomear para `curriculo-ats-friendly` em *Settings → Repository name*
-- [ ] **GitHub Pages ativado** em *Settings → Pages → Source: GitHub Actions* (o workflow já está pronto)
 - [ ] Prints da análise e exemplo de uso anexados
-- [ ] Endereço da aplicação preenchido na seção 2
 
 ---
 
@@ -227,3 +228,4 @@ Os testes cobrem: normalização e sinônimos, extração de requisitos (obrigat
 - O texto e a análise ficam apenas em `sessionStorage`, apagados ao fechar a aba.
 - Nenhum texto é usado para treinar modelo.
 - Nenhuma dependência de rede em tempo de execução, exceto o Google Fonts.
+- Hospedagem estática na Vercel (região `gru1`, São Paulo), sem backend: não há servidor que receba o currículo.
